@@ -1,18 +1,24 @@
-from oauthenticator.generic import GenericOAuthenticator
 import requests
+
+from oauthenticator.generic import GenericOAuthenticator
 
 # Base url for a simulated FHIR application, by running docker compose setup from https://github.com/smart-on-fhir/smart-dev-sandbox
 # Configuration in the sandbox:
-# - Launch Type: Provider Standalone Launch
+# - Launch Type: Provider EHR Launch (disable "Simulate Launch within the EHR user interface")
 # - FHIR Version: R4 (most modern)
 # - Providers:  [3]
-fhir_base_url = "http://localhost:4013/v/r4/sim/eyJoIjoiMSIsImoiOiIxIiwiZSI6IjMifQ/fhir"
+fhir_base_url = "http://localhost:4013/v/r4/fhir"
 # Location where a SMART on FHIR application broadcasts configuration
 smart_config_location = ".well-known/smart-configuration"
 client_id = '9dbfaca0-9b85-49b6-bddd-d5eb638c2156'
 client_secret = 'unguessableclientsecret'
-id_scopes = ["openid", "fhirUser"]  # both are required
-
+id_scopes = [
+    "openid",
+    "fhirUser",
+    "launch",
+    "launch/patient",
+    "patient/*.*",
+]
 
 # Generic OAuthenticator
 c.JupyterHub.authenticator_class = GenericOAuthenticator
@@ -36,3 +42,12 @@ for scope in c.GenericOAuthenticator.scope:
 c.GenericOAuthenticator.userdata_from_id_token = True
 # Only one field to derive a name from, and it contains (at least) slashes
 c.GenericOAuthenticator.username_claim = lambda r: r['fhirUser'].replace('/', '_')
+"""
+With scopes "launch" and "patient/*.*" you get an access token in addition to an ID token. 
+You can't use that access token to get userdata, but you can get it for patient data.
+
+# You can abuse the c.GenericOAuthenticator.userdata_url to be something like 
+# f"{fhir_base_url}/Observation/9" to fetch observations with the access token.
+For the demo endpoint it's not entirely clear to me how to discover the endpoint and params that provide proper user data,
+but that's probably application dependent.
+"""
